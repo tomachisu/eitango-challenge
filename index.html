@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#5c57d9" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <title>えいたんチャレンジ</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">中学準備・英単語</p>
+          <h1>えいたんチャレンジ</h1>
+        </div>
+        <button class="text-button" id="word-list-button" type="button">単語一覧</button>
+      </header>
+
+      <section class="dashboard" aria-label="学習の進み具合">
+        <div class="stat-card"><span>おぼえた</span><strong id="mastered-count">0 / --</strong></div>
+        <div class="stat-card"><span>今日の正解</span><strong id="today-correct">0</strong></div>
+        <div class="stat-card"><span>連続正解</span><strong id="streak-count">0</strong></div>
+      </section>
+
+      <section class="screen" id="welcome-screen">
+        <div class="hero-mark">Aa</div>
+        <p class="section-label">中学準備・全単語</p>
+        <h2>日本語を見て、<br />英語のつづりを答えよう！</h2>
+        <p class="muted">1日5分でOK。まちがえた単語は、また練習できるよ。</p>
+        <div class="goal-buttons" aria-label="問題数を選ぶ">
+          <button class="primary-button" data-questions="5" type="button">5問チャレンジ</button>
+          <button class="secondary-button" data-questions="10" type="button">10問チャレンジ</button>
+        </div>
+        <p class="tiny-note">発音ボタンを押すと英語を聞けます。</p>
+      </section>
+
+      <section class="screen hidden" id="quiz-screen" aria-live="polite">
+        <div class="quiz-topline">
+          <span id="question-number">1 / 5</span>
+          <div class="progress-track"><div id="progress-bar"></div></div>
+        </div>
+        <p class="section-label">この日本語は英語で？</p>
+        <h2 class="meaning" id="meaning">りんご</h2>
+        <button class="listen-button" id="listen-button" type="button" aria-label="英語の発音を聞く">
+          <span aria-hidden="true">🔊</span> 発音を聞く
+        </button>
+        <label class="answer-label" for="answer-input">英単語を入力</label>
+        <input id="answer-input" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="ここに入力" />
+        <div class="hint-row">
+          <button class="text-button" id="hint-button" type="button">ヒントを見る</button>
+          <p id="hint-text" class="hint-text"></p>
+        </div>
+        <p id="feedback" class="feedback" role="status"></p>
+        <button class="primary-button full-width" id="check-button" type="button">答え合わせ</button>
+        <button class="primary-button full-width hidden" id="next-button" type="button">次の問題へ</button>
+      </section>
+
+      <section class="screen hidden" id="result-screen">
+        <div class="hero-mark" id="result-mark">★</div>
+        <p class="section-label">今日の結果</p>
+        <h2 id="result-title">よくできました！</h2>
+        <p class="result-score"><strong id="score-value">0</strong><span>問 正解</span></p>
+        <p class="muted" id="result-message"></p>
+        <div id="review-box" class="review-box hidden">
+          <h3>もう一度見よう</h3>
+          <p id="review-words"></p>
+        </div>
+        <button class="primary-button full-width" id="restart-button" type="button">もう一度チャレンジ</button>
+        <button class="text-button center-button" id="home-button" type="button">ホームへ戻る</button>
+      </section>
+    </main>
+
+    <dialog id="word-dialog">
+      <div class="dialog-header">
+        <div><p class="section-label">今回の単語</p><h2>単語一覧</h2></div>
+        <button class="close-button" id="close-dialog" type="button" aria-label="閉じる">×</button>
+      </div>
+      <p class="muted">発音を聞いたり、意味とつづりを確認したりできます。</p>
+      <ul class="word-list" id="word-list"></ul>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>

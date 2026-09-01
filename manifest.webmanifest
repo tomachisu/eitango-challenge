@@ -1,0 +1,12 @@
+{
+  "name": "えいたんチャレンジ",
+  "short_name": "えいたん",
+  "lang": "ja",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f6ff",
+  "theme_color": "#5c57d9",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
