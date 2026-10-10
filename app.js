@@ -155,14 +155,7 @@ function showResults() {
   showScreen($("result-screen"));
 }
 
-function speak(text) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = .78;
-  window.speechSynthesis.speak(utterance);
-}
+function speak(text) {  if (!window.speechSynthesis) return;  window.speechSynthesis.cancel();  const utterance = new SpeechSynthesisUtterance(text);  utterance.lang = "en-US";  const usEnglishVoices = window.speechSynthesis.getVoices()    .filter((voice) => voice.lang.replace("_", "-").toLowerCase().startsWith("en-us"));  const preferredFemaleVoice = usEnglishVoices.find((voice) =>    /samantha|ava|allison|aria|jenny|zira|sara|sonia|google us english/i.test(voice.name)  );  utterance.voice = preferredFemaleVoice || usEnglishVoices[0] || null;  utterance.rate = .82;  window.speechSynthesis.speak(utterance);}
 
 function showHint() {
   const word = currentWord().english;
