@@ -1,4 +1,4 @@
-const CACHE_NAME = "eitango-challenge-v4";
+const CACHE_NAME = "eitango-challenge-v5";
 const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg", "./extras.js"];
 
 self.addEventListener("install", (event) => {
