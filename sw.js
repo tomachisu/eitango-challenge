@@ -1,1 +1,13 @@
-const C='eitango-challenge-v6';self.addEventListener('install',e=>{self.skipWaiting()});self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{caches.open(C).then(c=>c.put(e.request,r.clone()));return r}).catch(()=>caches.match(e.request)))})
+const CACHE_NAME = 'eitango-challenge-v8';
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', event => {
+ event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))).then(() => self.clients.claim()));
+});
+self.addEventListener('fetch', event => {
+ if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
+ event.respondWith(fetch(event.request, { cache: 'no-store' }).then(response => {
+ const copy = response.clone();
+ if (response.ok) event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)));
+ return response;
+ }).catch(() => caches.match(event.request)));
+});
