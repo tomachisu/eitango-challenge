@@ -65,7 +65,7 @@
   function advance() { if(!queue.length||attempts>=20||Date.now()-started>=8*60000)return finish(); item=queue.shift(); if(item.study)study();else question(); }
   function question() {
     phase='question';usedHint=false;answered=false;selected=[];
-    const w=item.w,r=record(w)[mode],stage=r.stage,target=mode==='meaning'?w.japanese:(w.answers?.[0]||w.english);
+    const w=item.w,r=record(w)[mode],stage=extra?(mode==='spelling'?3:1):r.stage,target=mode==='meaning'?w.japanese:(w.answers?.[0]||w.english);
     item.stage=stage; item.target=target;
     let body=`<p class="section-label">${mode==='meaning'?'意味を思い出そう':['正しい英語を選ぼう','文字を並べよう','抜けた文字を入れよう','英語を入力してみよう'][stage]}</p><h2 class="meaning">${esc(mode==='meaning'?w.english:w.japanese)}</h2><button class="listen-button" data-action="speak">🔊 英語を聞く</button>`;
     if(stage===0){const candidates=mix(words.filter(x=>(mode==='meaning'?x.japanese:(x.answers?.[0]||x.english))!==target));const choices=[target];for(const x of candidates){const a=mode==='meaning'?x.japanese:(x.answers?.[0]||x.english);if(!choices.includes(a))choices.push(a);if(choices.length===3)break;}body+=`<div class="g-options">${mix(choices).map(a=>`<button data-choice="${esc(a)}">${esc(a)}</button>`).join('')}</div>`;}
