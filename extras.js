@@ -16,6 +16,9 @@
     return db.cards[w.english];
   }
   function daily() { return db.days[day()] ||= {fresh:[],attempts:0,stars:0}; }
+  function nextReview(days){const date=new Date();date.setHours(0,0,0,0);date.setDate(date.getDate()+days);return date.getTime();}
+  function reviewAt(w){const time=record(w)[mode].due;if(!time)return 0;const date=new Date(time);date.setHours(0,0,0,0);return date.getTime();}
+  function newWordsAvailable(){return daily().fresh.length<2&&words.some(w=>!record(w).introduced);}
   function save() { try {localStorage.setItem(KEY,JSON.stringify(db));} catch { statusText='記録を保存できません。ブラウザの保存設定を確認してください。';} dashboard(); }
   let mode='spelling', queue=[], item=null, phase='home', usedHint=false, answered=false, attempts=0, wins=0, retry={}, selected=[], statusText='', started=0, extra=false;
   const screen=el('quiz-screen'), welcome=el('welcome-screen'), result=el('result-screen');
@@ -29,11 +32,11 @@
   function show(which) { [welcome,screen,result].forEach(s=>s.classList.toggle('hidden',s!==which)); }
   function home() {
     phase='home'; dashboard();
-    const due=words.filter(w=>record(w).introduced&&record(w)[mode].due<=Date.now()).length;
+    const due=words.filter(w=>record(w).introduced&&reviewAt(w)<=Date.now()).length;
     daily().completed ||= {};
     const available=due>0||daily().fresh.length<2&&words.some(w=>!record(w).introduced)||words.some(w=>daily().fresh.includes(w.english)&&record(w)[mode].lastDay!==day());
-    const done=!!daily().completed[mode]||!available;
-    welcome.innerHTML=`<div class="hero-mark">🌱</div><h2>少しずつ、できるように！</h2><p class="muted">新語は1日2語まで。復習が多い日は復習を優先するよ。</p><div class="g-tabs"><button class="${mode==='spelling'?'primary':'secondary'}-button" data-mode="spelling">日→英・つづり</button><button class="${mode==='meaning'?'primary':'secondary'}-button" data-mode="meaning">英→日・意味</button></div><p class="g-progress">この向きの復習：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box">🌱 ことばの庭　スタンプ ${db.stars}個<br><span class="g-small">${db.stars<5?'まずは5個で芽が育つよ':db.stars<15?'🌿 葉っぱが育った！ 次は15個':'🌸 花が咲いた！ 続けて庭を育てよう'}<br>1日1回、3問取り組むとスタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版9・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
+    const done=!!daily().completed[mode]&&!newWordsAvailable()||!available;
+    welcome.innerHTML=`<div class="hero-mark">🌱</div><h2>少しずつ、できるように！</h2><p class="muted">毎日、新語2語＋復習は最大4語。少しずつ進もう！</p><div class="g-tabs"><button class="${mode==='spelling'?'primary':'secondary'}-button" data-mode="spelling">日→英・つづり</button><button class="${mode==='meaning'?'primary':'secondary'}-button" data-mode="meaning">英→日・意味</button></div><p class="g-progress">この向きの復習：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box">🌱 ことばの庭　スタンプ ${db.stars}個<br><span class="g-small">${db.stars<5?'まずは5個で芽が育つよ':db.stars<15?'🌿 葉っぱが育った！ 次は15個':'🌸 花が咲いた！ 続けて庭を育てよう'}<br>1日1回、3問取り組むとスタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版14・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
     const startButton=welcome.querySelector('[data-action="start"]');
     if(done){startButton.textContent='今日のレッスン完了！';startButton.disabled=true;const button=document.createElement('button');button.className='secondary-button full-width';button.style.marginTop='12px';button.dataset.action='extra';button.textContent='もう少し練習する（3問）';button.disabled=!practiceWords().length;startButton.after(button);}
   }
@@ -47,15 +50,15 @@
   }
   function start() {
     daily().completed ||= {};
-    if(daily().completed[mode])return home();
+    if(daily().completed[mode]&&!newWordsAvailable())return home();
     extra=false;
-    const now=Date.now(); let due=words.filter(w=>record(w).introduced&&record(w)[mode].due<=now);
-    due.sort((a,b)=>record(a)[mode].due-record(b)[mode].due||record(b)[mode].wrong-record(a)[mode].wrong);
-    const n=due.length>=6?0:Math.max(0,2-daily().fresh.length);
+    const now=Date.now(); let due=words.filter(w=>record(w).introduced&&reviewAt(w)<=now);
+    due.sort((a,b)=>reviewAt(a)-reviewAt(b)||record(b)[mode].wrong-record(a)[mode].wrong);
+    const n=Math.max(0,2-daily().fresh.length);
     const fresh=words.filter(w=>!record(w).introduced).slice(0,n);
     fresh.forEach(w=>{record(w).introduced=true;daily().fresh.push(w.english);});
     const pending=words.filter(w=>daily().fresh.includes(w.english)&&record(w)[mode].lastDay!==day()&&!due.includes(w)&&!fresh.includes(w));
-    queue=[...fresh.map(w=>({w,study:true})),...pending.map(w=>({w,study:true})),...due.slice(0,6).map(w=>({w,study:record(w)[mode].stage===0}))];
+    queue=[...fresh.map(w=>({w,study:true})),...pending.map(w=>({w,study:true})),...due.slice(0,4).map(w=>({w,study:record(w)[mode].stage===0}))];
     attempts=0;wins=0;retry={};started=Date.now();statusText='';save();
     if(!queue.length){daily().completed[mode]=true;statusText='今日のレッスン完了！ 追加練習は好きなときにできるよ。';save();return home();} advance();
   }
@@ -84,8 +87,8 @@
     const independent=ok&&!usedHint&&item.stage===last;
     if(!extra){
     r.practiced=true;
-    if(ok){wins++;if(!usedHint)r.stage=Math.min(last,r.stage+1);if(independent&&r.lastDay!==day()){r.streak++;r.lastDay=day();}r.due=Date.now()+86400000*(independent?[1,3,7,14,30][Math.min(Math.max(r.streak-1,0),4)]:1);}
-    else {r.wrong++;r.streak=0;r.stage=Math.max(0,r.stage-1);r.due=Date.now()+86400000;}
+    if(ok){wins++;if(!usedHint)r.stage=Math.min(last,r.stage+1);if(independent&&r.lastDay!==day()){r.streak++;r.lastDay=day();}r.due=nextReview(independent?[1,3,7,14,30][Math.min(Math.max(r.streak-1,0),4)]:1);}
+    else {r.wrong++;r.streak=0;r.stage=Math.max(0,r.stage-1);r.due=nextReview(1);}
     retry[w.english]=(retry[w.english]||0)+1;
     if((!ok||usedHint||item.stage<last)&&retry[w.english]<=3)queue.splice(Math.min(2,queue.length),0,{w,study:!ok});
     }else if(ok){wins++;}
@@ -103,4 +106,3 @@
   screen.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='g-input'){e.preventDefault();answered?advance():check();}});
   home();
 })();
-
