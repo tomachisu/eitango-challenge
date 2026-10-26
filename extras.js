@@ -19,18 +19,13 @@
   function nextReview(days){const date=new Date();date.setHours(0,0,0,0);date.setDate(date.getDate()+days);return date.getTime();}
   function reviewAt(w){const time=record(w)[mode].due;if(!time)return 0;const date=new Date(time);date.setHours(0,0,0,0);return date.getTime();}
   function newWordsAvailable(){return daily().fresh.length<2&&words.some(w=>!record(w).introduced);}
-  function plant(){
-    if(db.stars>=15)return {icon:'🌸',label:'花',message:'花が咲いた！ 続けて庭を育てよう'};
-    if(db.stars>=5)return {icon:'🪴',label:'鉢植え',message:`鉢植えに育った！ あと${15-db.stars}個で花が咲くよ`};
-    if(db.stars>0)return {icon:'🌿',label:'葉っぱ',message:`葉っぱが出たよ！ あと${5-db.stars}個で鉢植えに育つよ`};
-    return {icon:'🌱',label:'芽',message:'練習して最初のスタンプを集めよう'};
-  }
-  function plantMark(){const p=plant();return `<div class="hero-mark" role="img" aria-label="育った植物：${p.label}">${p.icon}</div>`;}
+  function plantMark(){return window.EitangoGarden.render(db.stars);}
   function save() { try {localStorage.setItem(KEY,JSON.stringify(db));} catch { statusText='記録を保存できません。ブラウザの保存設定を確認してください。';} dashboard(); }
   let mode='spelling', queue=[], item=null, phase='home', usedHint=false, answered=false, attempts=0, wins=0, retry={}, selected=[], statusText='', started=0, extra=false;
   const screen=el('quiz-screen'), welcome=el('welcome-screen'), result=el('result-screen');
   const style=document.createElement('style'); style.textContent='.g-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.g-options button,.g-letters button{padding:13px;border:2px solid #ddd9fa;border-radius:12px;background:white;font-size:18px;color:#342f69;min-height:48px}.g-letters{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0}.g-box{padding:16px;background:#f0edff;border-radius:14px;margin:14px 0}.g-picture{font-size:64px}.g-answer{font-size:28px;letter-spacing:4px;min-height:45px}.g-small{font-size:14px;color:#625b80}.g-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:20px}.g-progress{margin:10px 0;color:#625b80}.g-selected{background:#e7e2ff!important;border-color:#5c57d9!important}.g-feedback{min-height:40px;margin:15px 0;font-size:17px}.g-tabs{display:flex;gap:10px;margin:14px 0}.g-tabs button{flex:1}'; document.head.append(style);
   style.textContent += '#g-input{display:block;box-sizing:border-box;width:100%;min-height:68px;padding:16px 18px;font-size:26px;border:2px solid #dcd8f3;border-radius:14px;background:#fff;color:#292443;margin:12px 0}#g-input:focus{outline:3px solid #dcd8ff;border-color:#5c57d9}';
+  style.textContent += '.garden-growth{width:240px;max-width:100%;margin:0 auto 12px;text-align:center}.garden-growth>svg{display:block;width:100%;height:auto}.garden-bouquet{display:flex;justify-content:center;flex-wrap:wrap;gap:5px;margin:4px auto 10px;padding:6px;background:#fff8fb;border-radius:14px}';
   function dashboard() {
     const meaning=words.filter(w=>record(w).meaning.streak>=3).length;
     const spelling=words.filter(w=>record(w).spelling.streak>=3).length;
@@ -43,7 +38,7 @@
     daily().completed ||= {};
     const available=due>0||daily().fresh.length<2&&words.some(w=>!record(w).introduced)||words.some(w=>daily().fresh.includes(w.english)&&record(w)[mode].lastDay!==day());
     const done=!!daily().completed[mode]&&!newWordsAvailable()||!available;
-    welcome.innerHTML=`${plantMark()}<h2>少しずつ、できるように！</h2><p class="muted">毎日、新語2語＋復習は最大4語。少しずつ進もう！</p><div class="g-tabs"><button class="${mode==='spelling'?'primary':'secondary'}-button" data-mode="spelling">日→英・つづり</button><button class="${mode==='meaning'?'primary':'secondary'}-button" data-mode="meaning">英→日・意味</button></div><p class="g-progress">この向きの復習：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box">${plant().icon} ことばの庭　スタンプ ${db.stars}個<br><span class="g-small">${plant().message}<br>1日1回、3問取り組むとスタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版15・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
+    welcome.innerHTML=`${plantMark()}<h2>少しずつ、できるように！</h2><p class="muted">毎日、新語2語＋復習は最大4語。少しずつ進もう！</p><div class="g-tabs"><button class="${mode==='spelling'?'primary':'secondary'}-button" data-mode="spelling">日→英・つづり</button><button class="${mode==='meaning'?'primary':'secondary'}-button" data-mode="meaning">英→日・意味</button></div><p class="g-progress">この向きの復習：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box">今日の取り組み　スタンプ ${db.stars}個<br><span class="g-small">1日1回、3問取り組むとスタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版18・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
     const startButton=welcome.querySelector('[data-action="start"]');
     if(done){startButton.textContent='今日のレッスン完了！';startButton.disabled=true;const button=document.createElement('button');button.className='secondary-button full-width';button.style.marginTop='12px';button.dataset.action='extra';button.textContent='もう少し練習する（3問）';button.disabled=!practiceWords().length;startButton.after(button);}
   }
@@ -113,3 +108,4 @@
   screen.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='g-input'){e.preventDefault();answered?advance():check();}});
   home();
 })();
+
