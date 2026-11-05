@@ -21,15 +21,16 @@
   function newWordsAvailable(){return daily().fresh.length<2&&words.some(w=>!record(w).introduced);}
   function plantMark(){return window.EitangoGarden.render(db.stars);}
   function save() { try {localStorage.setItem(KEY,JSON.stringify(db));} catch { statusText='記録を保存できません。ブラウザの保存設定を確認してください。';} dashboard(); }
-  let mode='spelling', queue=[], item=null, phase='home', usedHint=false, answered=false, attempts=0, wins=0, retry={}, selected=[], statusText='', started=0, extra=false;
+  const mode='spelling';
+  let queue=[], item=null, phase='home', usedHint=false, answered=false, attempts=0, wins=0, retry={}, selected=[], statusText='', started=0, extra=false, quizAnswers=[], quizWords=[];
   const screen=el('quiz-screen'), welcome=el('welcome-screen'), result=el('result-screen');
   const style=document.createElement('style'); style.textContent='.g-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.g-options button,.g-letters button{padding:13px;border:2px solid #ddd9fa;border-radius:12px;background:white;font-size:18px;color:#342f69;min-height:48px}.g-letters{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0}.g-box{padding:16px;background:#f0edff;border-radius:14px;margin:14px 0}.g-picture{font-size:64px}.g-answer{font-size:28px;letter-spacing:4px;min-height:45px}.g-small{font-size:14px;color:#625b80}.g-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:20px}.g-progress{margin:10px 0;color:#625b80}.g-selected{background:#e7e2ff!important;border-color:#5c57d9!important}.g-feedback{min-height:40px;margin:15px 0;font-size:17px}.g-tabs{display:flex;gap:10px;margin:14px 0}.g-tabs button{flex:1}'; document.head.append(style);
   style.textContent += '#g-input{display:block;box-sizing:border-box;width:100%;min-height:68px;padding:16px 18px;font-size:26px;border:2px solid #dcd8f3;border-radius:14px;background:#fff;color:#292443;margin:12px 0}#g-input:focus{outline:3px solid #dcd8ff;border-color:#5c57d9}';
   style.textContent += '.garden-growth{width:240px;max-width:100%;margin:0 auto 12px;text-align:center}.garden-growth>svg{display:block;width:100%;height:auto}.garden-bouquet{display:flex;justify-content:center;flex-wrap:wrap;gap:5px;margin:4px auto 10px;padding:6px;background:#fff8fb;border-radius:14px}';
   function dashboard() {
-    const meaning=words.filter(w=>record(w).meaning.streak>=3).length;
+    const learned=practiceWords().length;
     const spelling=words.filter(w=>record(w).spelling.streak>=3).length;
-    document.querySelector('.dashboard').innerHTML=`<div class="stat-card"><span>意味が定着</span><strong>${meaning} / ${words.length}</strong></div><div class="stat-card"><span>つづりが定着</span><strong>${spelling} / ${words.length}</strong></div><div class="stat-card"><span>今日の新語</span><strong>${daily().fresh.length} / 2</strong></div>`;
+    document.querySelector('.dashboard').innerHTML=`<div class="stat-card"><span>練習した単語</span><strong>${learned} / ${words.length}</strong></div><div class="stat-card"><span>つづりが定着</span><strong>${spelling} / ${words.length}</strong></div><div class="stat-card"><span>今日の新語</span><strong>${daily().fresh.length} / 2</strong></div>`;
   }
   function show(which) { [welcome,screen,result].forEach(s=>s.classList.toggle('hidden',s!==which)); }
   function home() {
@@ -38,11 +39,77 @@
     daily().completed ||= {};
     const available=due>0||daily().fresh.length<2&&words.some(w=>!record(w).introduced)||words.some(w=>daily().fresh.includes(w.english)&&record(w)[mode].lastDay!==day());
     const done=!!daily().completed[mode]&&!newWordsAvailable()||!available;
-    welcome.innerHTML=`${plantMark()}<h2>少しずつ、できるように！</h2><p class="muted">毎日、新語2語＋復習は最大4語。少しずつ進もう！</p><div class="g-tabs"><button class="${mode==='spelling'?'primary':'secondary'}-button" data-mode="spelling">日→英・つづり</button><button class="${mode==='meaning'?'primary':'secondary'}-button" data-mode="meaning">英→日・意味</button></div><p class="g-progress">この向きの復習：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box">今日の取り組み　スタンプ ${db.stars}個<br><span class="g-small">1日1回、3問取り組むとスタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版18・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
+    welcome.innerHTML=`${plantMark()}<h2>少しずつ、できるように！</h2><p class="muted">日→英で、毎日新語2語＋復習は最大4語。</p><p class="g-progress">復習待ち：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box"><button class="secondary-button full-width" data-action="quiz" ${practiceWords().length<10?'disabled':''}>小テスト（日→英・10問）</button><p class="g-small">${practiceWords().length<10?'練習した単語が10語になると始められるよ。':'好きなときに力だめし！ ヒントなしで10問、最後に答え合わせ。間違えた単語は翌日の復習へ。'}</p></div><div class="g-box">今日の取り組み　スタンプ ${db.stars}個<br><span class="g-small">1日1回、3問取り組むとスタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版19・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
     const startButton=welcome.querySelector('[data-action="start"]');
     if(done){startButton.textContent='今日のレッスン完了！';startButton.disabled=true;const button=document.createElement('button');button.className='secondary-button full-width';button.style.marginTop='12px';button.dataset.action='extra';button.textContent='もう少し練習する（3問）';button.disabled=!practiceWords().length;startButton.after(button);}
   }
   function practiceWords(){return words.filter(w=>{const r=record(w)[mode];return record(w).introduced&&(r.practiced||r.stage>0||r.wrong>0||r.lastDay);});}
+  function pickQuizWords(){
+    const pool=mix(practiceWords()), picked=[];
+    const take=(list,n)=>{if(n<=0)return;for(const w of list){if(!picked.includes(w)){picked.push(w);if(!--n)break;}}};
+    // Fill from today's untested words first, keeping review/recent/older variety.
+    const selectFrom=group=>{
+      const weak=group.filter(w=>reviewAt(w)<=Date.now()||record(w).spelling.streak<3);
+      weak.sort((a,b)=>(record(a).spelling.lastQuizAt||0)-(record(b).spelling.lastQuizAt||0)||reviewAt(a)-reviewAt(b)||record(b).spelling.wrong-record(a).spelling.wrong);
+      take(weak,Math.min(6,10-picked.length));
+      const recent=[...group].sort((a,b)=>words.indexOf(b)-words.indexOf(a));
+      take(recent,Math.min(2,10-picked.length));take([...recent].reverse(),Math.min(2,10-picked.length));take(group,10-picked.length);
+    };
+    selectFrom(pool.filter(w=>record(w).spelling.lastQuizDay!==day()));
+    selectFrom(pool.filter(w=>record(w).spelling.lastQuizDay===day()));
+    const previous=db.quizLastWords||[];
+    if(pool.length>10&&previous.length===10&&picked.every(w=>previous.includes(w.english))){
+      const replacement=pool.find(w=>!previous.includes(w.english));
+      if(replacement)picked[picked.length-1]=replacement;
+    }
+    return mix(picked);
+  }
+  function startQuiz(){
+    if(practiceWords().length<10){statusText='練習した単語が10語になったら始めよう。';return home();}
+    quizWords=pickQuizWords();quizAnswers=[];quizQuestion();
+  }
+  function quizQuestion(){
+    phase='quiz';
+    screen.innerHTML=`<div class="g-top"><button class="text-button" data-action="home">← 最初の画面へ</button><span>小テスト ${quizAnswers.length+1} / 10</span></div><p class="g-small">答え合わせは10問のあと。途中で戻ると、このテストは記録されません。</p><h2 class="meaning">${esc(quizWords[quizAnswers.length].japanese)}</h2><label for="g-input">英語を入力</label><input id="g-input" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="ここに入力"><button class="primary-button full-width" data-action="quiz-answer">${quizAnswers.length===9?'答え合わせを見る':'回答して次へ'}</button><button class="text-button center-button" data-action="quiz-skip">まだ分からない</button><p id="g-feedback" role="status"></p>`;
+    show(screen);el('g-input').focus?.();
+  }
+  function quizSubmit(skip=false){
+    if(phase!=='quiz')return;
+    const answer=skip?'':el('g-input').value.trim();
+    if(!skip&&!answer){el('g-feedback').textContent='入力するか「まだ分からない」を押してね。';return;}
+    const w=quizWords[quizAnswers.length];
+    const ok=[w.english,...(w.answers||[])].some(a=>norm(a)===norm(answer));
+    quizAnswers.push({w,answer,ok});
+    if(quizAnswers.length<10)return quizQuestion();
+    finishQuiz();
+  }
+  function finishQuiz(){
+    if(phase!=='quiz'||quizAnswers.length!==10)return;
+    phase='quiz-result';
+    const tomorrow=nextReview(1);
+    for(const a of quizAnswers){
+      const r=record(a.w).spelling;r.lastQuizAt=Date.now();r.lastQuizDay=day();
+      if(!a.ok){
+        // A repeated test cannot repeatedly lower the learning stage on one day.
+        if(r.quizWrongDay!==day()){r.wrong++;r.stage=Math.max(0,r.stage-1);r.quizWrongDay=day();}
+        r.streak=0;r.due=r.due?Math.min(r.due,tomorrow):tomorrow;
+        r.quizReviewDue=r.quizReviewDue?Math.min(r.quizReviewDue,tomorrow):tomorrow;
+      }
+    }
+    db.quizLastWords=quizWords.map(w=>w.english);
+    daily().attempts+=10;
+    if(!daily().stars){daily().stars=1;db.stars++;}
+    save();
+    const score=quizAnswers.filter(a=>a.ok).length;
+    result.innerHTML=`${plantMark()}<h2>小テスト、おつかれさま！</h2><p class="result-score"><strong>${score} / 10</strong>問 正解</p><p class="muted">間違えた単語は翌日以降のレッスンで優先して復習するよ。正解した単語の復習予定はそのまま。</p><ul class="word-list">${quizAnswers.map(a=>`<li><div><strong>${a.ok?'○':'もう一度'} ${esc(a.w.japanese)}</strong><p>あなたの答え：${esc(a.answer||'まだ分からない')}<br>正しい答え：${esc(a.w.answers?.[0]||a.w.english)}</p></div></li>`).join('')}</ul><div class="g-box">スタンプ合計 ${db.stars}個（1日1個まで）</div>${score<10?'<button class="secondary-button full-width" data-action="quiz-relearn">間違えた単語を覚え直す</button>':''}<button class="secondary-button full-width" data-action="quiz">もう一度小テスト（10問）</button><button class="text-button center-button" data-action="home">最初の画面へ</button>`;
+    show(result);
+  }
+  function relearnQuiz(){
+    const missed=quizAnswers.filter(a=>!a.ok);
+    if(!missed.length)return home();
+    extra=true;attempts=0;wins=0;retry={};started=Date.now();
+    queue=missed.map(a=>({w:a.w,study:true}));advance();
+  }
   function startExtra(){
     const pool=practiceWords().sort((a,b)=>record(b)[mode].wrong-record(a)[mode].wrong||record(a)[mode].stage-record(b)[mode].stage);
     if(!pool.length){statusText='まず今日のレッスンで単語を練習してみよう。';return home();}
@@ -55,7 +122,8 @@
     if(daily().completed[mode]&&!newWordsAvailable())return home();
     extra=false;
     const now=Date.now(); let due=words.filter(w=>record(w).introduced&&reviewAt(w)<=now);
-    due.sort((a,b)=>reviewAt(a)-reviewAt(b)||record(b)[mode].wrong-record(a)[mode].wrong);
+    const priority=w=>!!record(w).spelling.quizReviewDue&&record(w).spelling.quizReviewDue<=now;
+    due.sort((a,b)=>Number(priority(b))-Number(priority(a))||reviewAt(a)-reviewAt(b)||record(b)[mode].wrong-record(a)[mode].wrong);
     const n=Math.max(0,2-daily().fresh.length);
     const fresh=words.filter(w=>!record(w).introduced).slice(0,n);
     fresh.forEach(w=>{record(w).introduced=true;daily().fresh.push(w.english);});
@@ -89,6 +157,7 @@
     const independent=ok&&!usedHint&&item.stage===last;
     if(!extra){
     r.practiced=true;
+    if(r.quizReviewDue&&r.quizReviewDue<=Date.now()){if(ok)delete r.quizReviewDue;else r.quizReviewDue=nextReview(1);}
     if(ok){wins++;if(!usedHint)r.stage=Math.min(last,r.stage+1);if(independent&&r.lastDay!==day()){r.streak++;r.lastDay=day();}r.due=nextReview(independent?[1,3,7,14,30][Math.min(Math.max(r.streak-1,0),4)]:1);}
     else {r.wrong++;r.streak=0;r.stage=Math.max(0,r.stage-1);r.due=nextReview(1);}
     retry[w.english]=(retry[w.english]||0)+1;
@@ -103,9 +172,10 @@
   }
   function tone(ok){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const c=new A();[ok?660:180,ok?880:null].filter(Boolean).forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+i*.14;o.frequency.value=f;o.type=ok?'sine':'triangle';g.gain.setValueAtTime(.42,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);o.connect(g).connect(c.destination);o.start(t);o.stop(t+.22);});setTimeout(()=>c.close(),600);}
   function finish(){phase='result';if(!extra){daily().completed ||= {};daily().completed[mode]=true;}save();result.innerHTML=`${plantMark()}<h2>${extra?'追加練習できたね！':'今日のレッスン完了！'}</h2><p class="result-score"><strong>${attempts}</strong>回 練習したよ</p><p>正解 ${wins}回。覚え直した時間も、ちゃんと練習だよ。</p><div class="g-box">${daily().stars?'今日のスタンプ獲得！':'あと少し練習するとスタンプが付くよ。'}<br>スタンプ合計 ${db.stars}個</div><p class="muted">今日はここで終えてもOK。追加練習は何回でもできるよ。翌日以降の復習予定はそのまま。</p><button class="primary-button full-width" data-action="extra">もう少し練習する（3問）</button><button class="text-button center-button" data-action="home">最初の画面へ</button>`;show(result);}
-  function action(e){const b=e.target.closest('button');if(!b||!b.closest('#welcome-screen,#quiz-screen,#result-screen'))return;e.stopImmediatePropagation();if(b.disabled)return;if(b.dataset.mode){mode=b.dataset.mode;return home();}if(b.dataset.choice!==undefined)return check(b.dataset.choice);if(b.dataset.tile!==undefined){selected.push(Number(b.dataset.tile));b.disabled=true;b.classList.add('g-selected');b.setAttribute('aria-pressed','true');el('g-built').textContent=selected.map(i=>item.tiles[i].c).join('');return;}switch(b.dataset.action){case'home':home();break;case'start':start();break;case'extra':startExtra();break;case'speak':speak(item.w.english);break;case'practice':question();break;case'next':advance();break;case'check':check();break;case'unknown':check('\u0000');break;case'hint':usedHint=true;el('g-hint').textContent=`最初は「${item.target[0]}」。${item.target.length}文字`;break;case'undo':{const i=selected.pop();if(i!==undefined){const tile=screen.querySelector(`[data-tile="${i}"]`);tile.disabled=false;tile.classList.remove("g-selected");tile.setAttribute("aria-pressed","false");}el('g-built').textContent=selected.map(i=>item.tiles[i].c).join('');break;}}}
+  function action(e){const b=e.target.closest('button');if(!b||!b.closest('#welcome-screen,#quiz-screen,#result-screen'))return;e.stopImmediatePropagation();if(b.disabled)return;
+    switch(b.dataset.action){case'quiz':return startQuiz();case'quiz-answer':return quizSubmit();case'quiz-skip':return quizSubmit(true);case'quiz-relearn':return relearnQuiz();}
+    if(b.dataset.choice!==undefined)return check(b.dataset.choice);if(b.dataset.tile!==undefined){selected.push(Number(b.dataset.tile));b.disabled=true;b.classList.add('g-selected');b.setAttribute('aria-pressed','true');el('g-built').textContent=selected.map(i=>item.tiles[i].c).join('');return;}switch(b.dataset.action){case'home':home();break;case'start':start();break;case'extra':startExtra();break;case'speak':speak(item.w.english);break;case'practice':question();break;case'next':advance();break;case'check':check();break;case'unknown':check('\u0000');break;case'hint':usedHint=true;el('g-hint').textContent=`最初は「${item.target[0]}」。${item.target.length}文字`;break;case'undo':{const i=selected.pop();if(i!==undefined){const tile=screen.querySelector(`[data-tile="${i}"]`);tile.disabled=false;tile.classList.remove("g-selected");tile.setAttribute("aria-pressed","false");}el('g-built').textContent=selected.map(i=>item.tiles[i].c).join('');break;}}}
   document.addEventListener('click',action,true);
-  screen.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='g-input'){e.preventDefault();answered?advance():check();}});
+  screen.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='g-input'&&!e.isComposing&&!e.repeat){e.preventDefault();if(phase==='quiz')quizSubmit();else if(phase==='question'){answered?advance():check();}}});
   home();
 })();
-
