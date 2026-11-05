@@ -27,8 +27,9 @@
   const style=document.createElement('style'); style.textContent='.g-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.g-options button,.g-letters button{padding:13px;border:2px solid #ddd9fa;border-radius:12px;background:white;font-size:18px;color:#342f69;min-height:48px}.g-letters{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0}.g-box{padding:16px;background:#f0edff;border-radius:14px;margin:14px 0}.g-picture{font-size:64px}.g-answer{font-size:28px;letter-spacing:4px;min-height:45px}.g-small{font-size:14px;color:#625b80}.g-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:20px}.g-progress{margin:10px 0;color:#625b80}.g-selected{background:#e7e2ff!important;border-color:#5c57d9!important}.g-feedback{min-height:40px;margin:15px 0;font-size:17px}.g-tabs{display:flex;gap:10px;margin:14px 0}.g-tabs button{flex:1}'; document.head.append(style);
   style.textContent += '#g-input{display:block;box-sizing:border-box;width:100%;min-height:68px;padding:16px 18px;font-size:26px;border:2px solid #dcd8f3;border-radius:14px;background:#fff;color:#292443;margin:12px 0}#g-input:focus{outline:3px solid #dcd8ff;border-color:#5c57d9}';
   style.textContent += '.garden-growth{width:240px;max-width:100%;margin:0 auto 12px;text-align:center}.garden-growth>svg{display:block;width:100%;height:auto}.garden-bouquet{display:flex;justify-content:center;flex-wrap:wrap;gap:5px;margin:4px auto 10px;padding:6px;background:#fff8fb;border-radius:14px}';
+  style.textContent += '.g-quiz-review{list-style:none;padding:0;text-align:left}.g-quiz-review li{padding:20px 16px;margin:16px 0;background:#f5f2ff;border-radius:16px;overflow-wrap:anywhere}.g-quiz-review h3{font-size:24px;margin:0 0 14px}.g-quiz-review p{font-size:21px;line-height:1.6;margin:12px 0}.g-quiz-review .g-correct-answer{display:block;font-size:30px;line-height:1.4;color:#342f69;margin-top:5px}';
   function dashboard() {
-    const learned=practiceWords().length;
+    const learned=quizPool().length;
     const spelling=words.filter(w=>record(w).spelling.streak>=3).length;
     document.querySelector('.dashboard').innerHTML=`<div class="stat-card"><span>練習した単語</span><strong>${learned} / ${words.length}</strong></div><div class="stat-card"><span>つづりが定着</span><strong>${spelling} / ${words.length}</strong></div><div class="stat-card"><span>今日の新語</span><strong>${daily().fresh.length} / 2</strong></div>`;
   }
@@ -39,13 +40,15 @@
     daily().completed ||= {};
     const available=due>0||daily().fresh.length<2&&words.some(w=>!record(w).introduced)||words.some(w=>daily().fresh.includes(w.english)&&record(w)[mode].lastDay!==day());
     const done=!!daily().completed[mode]&&!newWordsAvailable()||!available;
-    welcome.innerHTML=`${plantMark()}<h2>少しずつ、できるように！</h2><p class="muted">日→英で、毎日新語2語＋復習は最大4語。</p><p class="g-progress">復習待ち：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box"><button class="secondary-button full-width" data-action="quiz" ${practiceWords().length<10?'disabled':''}>小テスト（日→英・10問）</button><p class="g-small">${practiceWords().length<10?'練習した単語が10語になると始められるよ。':'好きなときに力だめし！ ヒントなしで10問、最後に答え合わせ。間違えた単語は翌日の復習へ。'}</p></div><div class="g-box">今日の取り組み　スタンプ ${db.stars}個<br><span class="g-small">1日1回、3問取り組むとスタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版19・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
+    welcome.innerHTML=`${plantMark()}<h2>少しずつ、できるように！</h2><p class="muted">日→英で、毎日新語2語＋復習は最大4語。</p><p class="g-progress">復習待ち：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box"><button class="secondary-button full-width" data-action="quiz" ${quizPool().length<10?'disabled':''}>小テスト（日→英・10問）</button><p class="g-small">${quizPool().length<10?'通常レッスンで回答した単語が10語になると始められるよ。':'好きなときに力だめし！ ヒントなしで10問、最後に答え合わせ。間違えた単語は翌日の復習へ。'}</p></div><div class="g-box">今日の取り組み　スタンプ ${db.stars}個<br><span class="g-small">1日1回、3問取り組むとスタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版20・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
     const startButton=welcome.querySelector('[data-action="start"]');
     if(done){startButton.textContent='今日のレッスン完了！';startButton.disabled=true;const button=document.createElement('button');button.className='secondary-button full-width';button.style.marginTop='12px';button.dataset.action='extra';button.textContent='もう少し練習する（3問）';button.disabled=!practiceWords().length;startButton.after(button);}
   }
   function practiceWords(){return words.filter(w=>{const r=record(w)[mode];return record(w).introduced&&(r.practiced||r.stage>0||r.wrong>0||r.lastDay);});}
+  // Only normal-lesson answers set practiced; test errors/stages are not proof of learning.
+  function quizPool(){return words.filter(w=>record(w).introduced&&record(w).spelling.practiced===true);}
   function pickQuizWords(){
-    const pool=mix(practiceWords()), picked=[];
+    const pool=mix(quizPool()), picked=[];
     const take=(list,n)=>{if(n<=0)return;for(const w of list){if(!picked.includes(w)){picked.push(w);if(!--n)break;}}};
     // Fill from today's untested words first, keeping review/recent/older variety.
     const selectFrom=group=>{
@@ -65,7 +68,7 @@
     return mix(picked);
   }
   function startQuiz(){
-    if(practiceWords().length<10){statusText='練習した単語が10語になったら始めよう。';return home();}
+    if(quizPool().length<10){statusText='通常レッスンで回答した単語が10語になったら始めよう。';return home();}
     quizWords=pickQuizWords();quizAnswers=[];quizQuestion();
   }
   function quizQuestion(){
@@ -100,8 +103,9 @@
     daily().attempts+=10;
     if(!daily().stars){daily().stars=1;db.stars++;}
     save();
-    const score=quizAnswers.filter(a=>a.ok).length;
-    result.innerHTML=`${plantMark()}<h2>小テスト、おつかれさま！</h2><p class="result-score"><strong>${score} / 10</strong>問 正解</p><p class="muted">間違えた単語は翌日以降のレッスンで優先して復習するよ。正解した単語の復習予定はそのまま。</p><ul class="word-list">${quizAnswers.map(a=>`<li><div><strong>${a.ok?'○':'もう一度'} ${esc(a.w.japanese)}</strong><p>あなたの答え：${esc(a.answer||'まだ分からない')}<br>正しい答え：${esc(a.w.answers?.[0]||a.w.english)}</p></div></li>`).join('')}</ul><div class="g-box">スタンプ合計 ${db.stars}個（1日1個まで）</div>${score<10?'<button class="secondary-button full-width" data-action="quiz-relearn">間違えた単語を覚え直す</button>':''}<button class="secondary-button full-width" data-action="quiz">もう一度小テスト（10問）</button><button class="text-button center-button" data-action="home">最初の画面へ</button>`;
+    const score=quizAnswers.filter(a=>a.ok).length,missed=quizAnswers.filter(a=>!a.ok);
+    const review=missed.length?`<p class="muted">間違えた単語だけ確認しよう。翌日以降のレッスンでも優先して復習するよ。</p><ul class="g-quiz-review">${missed.map(a=>`<li><h3>${esc(a.w.japanese)}</h3><p>正しい答え<strong class="g-correct-answer">${esc(a.w.answers?.[0]||a.w.english)}</strong></p><p>あなたの答え：${esc(a.answer||'まだ分からない')}</p></li>`).join('')}</ul>`:'<p class="muted">全問正解！ よく思い出せたね！</p>';
+    result.innerHTML=`${plantMark()}<h2>小テスト、おつかれさま！</h2><p class="result-score"><strong>${score} / 10</strong>問 正解</p>${review}<div class="g-box">スタンプ合計 ${db.stars}個（1日1個まで）</div>${score<10?'<button class="secondary-button full-width" data-action="quiz-relearn">間違えた単語を覚え直す</button>':''}<button class="secondary-button full-width" data-action="quiz">もう一度小テスト（10問）</button><button class="text-button center-button" data-action="home">最初の画面へ</button>`;
     show(result);
   }
   function relearnQuiz(){
