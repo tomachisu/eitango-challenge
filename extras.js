@@ -16,6 +16,7 @@
     return db.cards[w.english];
   }
   function daily() { return db.days[day()] ||= {fresh:[],attempts:0,stars:0}; }
+  function awardStamp(){if(!daily().stars){daily().stars=1;db.stars++;}}
   function nextReview(days){const date=new Date();date.setHours(0,0,0,0);date.setDate(date.getDate()+days);return date.getTime();}
   function reviewAt(w){const time=record(w)[mode].due;if(!time)return 0;const date=new Date(time);date.setHours(0,0,0,0);return date.getTime();}
   function newWordsAvailable(){return daily().fresh.length<2&&words.some(w=>!record(w).introduced);}
@@ -40,7 +41,7 @@
     daily().completed ||= {};
     const available=due>0||daily().fresh.length<2&&words.some(w=>!record(w).introduced)||words.some(w=>daily().fresh.includes(w.english)&&record(w)[mode].lastDay!==day());
     const done=!!daily().completed[mode]&&!newWordsAvailable()||!available;
-    welcome.innerHTML=`${plantMark()}<h2>少しずつ、できるように！</h2><p class="muted">日→英で、毎日新語2語＋復習は最大4語。</p><p class="g-progress">復習待ち：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box"><button class="secondary-button full-width" data-action="quiz" ${quizPool().length<10?'disabled':''}>小テスト（日→英・10問）</button><p class="g-small">${quizPool().length<10?'通常レッスンで回答した単語が10語になると始められるよ。':'好きなときに力だめし！ ヒントなしで10問、最後に答え合わせ。間違えた単語は翌日の復習へ。'}</p></div><div class="g-box"><button class="secondary-button full-width" data-grammar="start">かんたん英作文（並べ替え・3問）</button><p class="g-small">練習した単語で英文を作ろう。文のルールは少しずつ紹介するよ。</p></div><div class="g-box">今日の取り組み　スタンプ ${db.stars}個<br><span class="g-small">1日1回、3問取り組むとスタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版22・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
+    welcome.innerHTML=`${plantMark()}<h2>少しずつ、できるように！</h2><p class="muted">日→英で、毎日新語2語＋復習は最大4語。</p><p class="g-progress">復習待ち：${due}語　今日の練習：${daily().attempts}回</p><button class="primary-button full-width" data-action="start">今日のレッスンを始める</button><div class="g-box"><button class="secondary-button full-width" data-action="quiz" ${quizPool().length<10?'disabled':''}>小テスト（日→英・10問）</button><p class="g-small">${quizPool().length<10?'通常レッスンで回答した単語が10語になると始められるよ。':'好きなときに力だめし！ ヒントなしで10問、最後に答え合わせ。間違えた単語は翌日の復習へ。'}</p></div><div class="g-box"><button class="secondary-button full-width" data-grammar="start">かんたん英作文（並べ替え・5問）</button><p class="g-small">練習した単語で英文を作ろう。文のルールは少しずつ紹介するよ。</p></div><div class="g-box">今日の取り組み　スタンプ ${db.stars}個<br><span class="g-small">今日のレッスン・小テスト・英作文のどれか1つを最後まで取り組むと、1日1個スタンプ。お休みしても減らないよ。</span></div><p class="g-small">「覚える→選ぶ→並べる→穴埋め→入力」で練習。定着は別の日に3回、自力で答えた単語です。</p><p role="status">${esc(statusText)}</p><p class="tiny-note">更新版23・記録はこのスマホのブラウザに保存されます。</p>`; show(welcome);
     const startButton=welcome.querySelector('[data-action="start"]');
     if(done){startButton.textContent='今日のレッスン完了！';startButton.disabled=true;const button=document.createElement('button');button.className='secondary-button full-width';button.style.marginTop='12px';button.dataset.action='extra';button.textContent='もう少し練習する（3問）';button.disabled=!practiceWords().length;startButton.after(button);}
   }
@@ -101,7 +102,7 @@
     }
     db.quizLastWords=quizWords.map(w=>w.english);
     daily().attempts+=10;
-    if(!daily().stars){daily().stars=1;db.stars++;}
+    awardStamp();
     save();
     const score=quizAnswers.filter(a=>a.ok).length,missed=quizAnswers.filter(a=>!a.ok);
     const review=missed.length?`<p class="muted">間違えた単語だけ確認しよう。翌日以降のレッスンでも優先して復習するよ。</p><ul class="g-quiz-review">${missed.map(a=>`<li><h3>${esc(a.w.japanese)}</h3><p>正しい答え<strong class="g-correct-answer">${esc(a.w.answers?.[0]||a.w.english)}</strong></p><p>あなたの答え：${esc(a.answer||'まだ分からない')}</p></li>`).join('')}</ul>`:'<p class="muted">全問正解！ よく思い出せたね！</p>';
@@ -167,7 +168,6 @@
     retry[w.english]=(retry[w.english]||0)+1;
     if((!ok||usedHint||item.stage<last)&&retry[w.english]<=3)queue.splice(Math.min(2,queue.length),0,{w,study:!ok});
     }else if(ok){wins++;}
-    if(daily().attempts>=3&&!daily().stars){daily().stars=1;db.stars++;}
     save();tone(ok);
     screen.querySelectorAll('button,input').forEach(x=>{if(!['home','speak'].includes(x.dataset.action))x.disabled=true;});
     el('g-feedback').innerHTML=ok?`できたね！ ${usedHint?'ヒントを使って練習できたよ。':independent?'明日以降も思い出してみよう。':'次は少し難しい練習をしてみよう。'}`:`正しい答えは <b>${esc(target)}</b>。少し後に、やさしい練習で覚え直そう。`;
@@ -175,13 +175,13 @@
     const next=document.createElement('button');next.className='primary-button full-width';next.dataset.action='next';next.textContent=queue.length&&attempts<20?'次へ':'今日の結果を見る';screen.append(next);
   }
   function tone(ok){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const c=new A();[ok?660:180,ok?880:null].filter(Boolean).forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+i*.14;o.frequency.value=f;o.type=ok?'sine':'triangle';g.gain.setValueAtTime(.42,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);o.connect(g).connect(c.destination);o.start(t);o.stop(t+.22);});setTimeout(()=>c.close(),600);}
-  function finish(){phase='result';if(!extra){daily().completed ||= {};daily().completed[mode]=true;}save();result.innerHTML=`${plantMark()}<h2>${extra?'追加練習できたね！':'今日のレッスン完了！'}</h2><p class="result-score"><strong>${attempts}</strong>回 練習したよ</p><p>正解 ${wins}回。覚え直した時間も、ちゃんと練習だよ。</p><div class="g-box">${daily().stars?'今日のスタンプ獲得！':'あと少し練習するとスタンプが付くよ。'}<br>スタンプ合計 ${db.stars}個</div><p class="muted">今日はここで終えてもOK。追加練習は何回でもできるよ。翌日以降の復習予定はそのまま。</p><button class="primary-button full-width" data-action="extra">もう少し練習する（3問）</button><button class="text-button center-button" data-action="home">最初の画面へ</button>`;show(result);}
+  function finish(){phase='result';if(!extra){daily().completed ||= {};daily().completed[mode]=true;if(attempts>0)awardStamp();}save();result.innerHTML=`${plantMark()}<h2>${extra?'追加練習できたね！':'今日のレッスン完了！'}</h2><p class="result-score"><strong>${attempts}</strong>回 練習したよ</p><p>正解 ${wins}回。覚え直した時間も、ちゃんと練習だよ。</p><div class="g-box">${daily().stars?'今日のスタンプ獲得！':'今日のレッスン・小テスト・英作文のどれか1つを最後まで取り組むとスタンプ。'}<br>スタンプ合計 ${db.stars}個</div><p class="muted">今日はここで終えてもOK。追加練習は何回でもできるよ。翌日以降の復習予定はそのまま。</p><button class="primary-button full-width" data-action="extra">もう少し練習する（3問）</button><button class="text-button center-button" data-action="home">最初の画面へ</button>`;show(result);}
   function action(e){const b=e.target.closest('button');if(!b||!b.closest('#welcome-screen,#quiz-screen,#result-screen'))return;e.stopImmediatePropagation();if(b.disabled)return;
     if(grammar?.handle(b))return;
     switch(b.dataset.action){case'quiz':return startQuiz();case'quiz-answer':return quizSubmit();case'quiz-skip':return quizSubmit(true);case'quiz-relearn':return relearnQuiz();}
     if(b.dataset.choice!==undefined)return check(b.dataset.choice);if(b.dataset.tile!==undefined){selected.push(Number(b.dataset.tile));b.disabled=true;b.classList.add('g-selected');b.setAttribute('aria-pressed','true');el('g-built').textContent=selected.map(i=>item.tiles[i].c).join('');return;}switch(b.dataset.action){case'home':home();break;case'start':start();break;case'extra':startExtra();break;case'speak':speak(item.w.english);break;case'practice':question();break;case'next':advance();break;case'check':check();break;case'unknown':check('\u0000');break;case'hint':usedHint=true;el('g-hint').textContent=`最初は「${item.target[0]}」。${item.target.length}文字`;break;case'undo':{const i=selected.pop();if(i!==undefined){const tile=screen.querySelector(`[data-tile="${i}"]`);tile.disabled=false;tile.classList.remove("g-selected");tile.setAttribute("aria-pressed","false");}el('g-built').textContent=selected.map(i=>item.tiles[i].c).join('');break;}}}
   document.addEventListener('click',action,true);
   screen.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='g-input'&&!e.isComposing&&!e.repeat){e.preventDefault();if(phase==='quiz')quizSubmit();else if(phase==='question'){answered?advance():check();}}});
-  const grammar=window.EitangoGrammar?.create({getWords:quizPool,onHome:home,renderPlant:plantMark,playTone:tone,onAttempt:()=>{daily().attempts++;if(daily().attempts>=3&&!daily().stars){daily().stars=1;db.stars++;}save();}});
+  const grammar=window.EitangoGrammar?.create({getWords:quizPool,onHome:home,renderPlant:plantMark,playTone:tone,onAttempt:()=>{daily().attempts++;save();},onComplete:()=>{awardStamp();save();}});
   home();
 })();

@@ -65,7 +65,7 @@
     const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db));return true;}catch{return false;}};
     const show=target=>['welcome-screen','quiz-screen','result-screen'].forEach(id=>document.getElementById(id).classList.toggle('hidden',id!==target));
     const button=(key,label,cls='primary-button full-width')=>`<button class="${cls}" data-grammar="${key}">${label}</button>`;
-    const heading=()=>`<div class="g-top">${button('home','← 最初の画面へ','text-button')}<span>かんたん英作文 ${count+1} / 3</span></div>`;
+    const heading=()=>`<div class="g-top">${button('home','← 最初の画面へ','text-button')}<span>かんたん英作文 ${count+1} / 5</span></div>`;
     function start(){
       const all=catalog(host.getWords());
       if(!all.length){phase='empty';screen.innerHTML=heading()+'<h2>単語を練習してから始めよう</h2><p>通常レッスンで回答した単語が増えると、使える英文も増えるよ。</p>';show('quiz-screen');return;}
@@ -76,9 +76,9 @@
       // Review first; introduce at most one new pattern per round.
       if(due.length)chosen.push(due[0]);
       if(frontier&&!chosen.includes(frontier))chosen.push(frontier);
-      for(const id of [...due,...shuffle(known)])if(chosen.length<3&&!chosen.includes(id))chosen.push(id);
+      for(const id of [...due,...shuffle(known)])if(chosen.length<5&&!chosen.includes(id))chosen.push(id);
       if(!chosen.length)chosen.push(frontier||ids[0]);
-      while(chosen.length<3)chosen.push(chosen[chosen.length-1]);
+      while(chosen.length<5)chosen.push(chosen[chosen.length-1]);
       const used=new Set();queue=chosen.map(id=>{const pool=shuffle(all.filter(q=>q.id===id));const q=pool.find(q=>!used.has(q.answer))||pool[0];used.add(q.answer);return q;});
       count=0;wins=0;session=[];advance();
     }
@@ -106,9 +106,9 @@
       r.tries++;if(ok){wins++;r.correct++;if(r.lastDay!==today()){r.streak++;r.lastDay=today();}r.due=later([1,3,7,14,30][Math.min(Math.max(r.streak-1,0),4)]);}else{r.streak=0;r.due=later(1);}
       db.cards[item.id]=r;session.push({item,ok,answer});const saved=save();host.onAttempt();host.playTone(ok);
       phase='feedback';
-      screen.innerHTML=`<div class="g-top">${button('home','← 最初の画面へ','text-button')}<span>英作文 ${count} / 3</span></div><h2>${ok?'できたね！':'ここを覚え直そう'}</h2><p>${esc(item.jp)}</p><p class="grammar-sentence">${esc(item.answer)}</p><div class="g-box">${esc(item.rule)}</div>${!ok&&answer?`<p>あなたの並べ方：${esc(answer)}</p>`:''}${saved?'':'<p role="alert">復習記録を保存できませんでした。ブラウザの保存設定を確認してください。</p>'}`+button('speak','🔊 英文を聞く','listen-button')+button('next',queue.length?'次の問題へ':'結果を見る');show('quiz-screen');
+      screen.innerHTML=`<div class="g-top">${button('home','← 最初の画面へ','text-button')}<span>英作文 ${count} / 5</span></div><h2>${ok?'できたね！':'ここを覚え直そう'}</h2><p>${esc(item.jp)}</p><p class="grammar-sentence">${esc(item.answer)}</p><div class="g-box">${esc(item.rule)}</div>${!ok&&answer?`<p>あなたの並べ方：${esc(answer)}</p>`:''}${saved?'':'<p role="alert">復習記録を保存できませんでした。ブラウザの保存設定を確認してください。</p>'}`+button('speak','🔊 英文を聞く','listen-button')+button('next',queue.length?'次の問題へ':'結果を見る');show('quiz-screen');
     }
-    function finish(){phase='result';result.innerHTML=host.renderPlant()+`<h2>英作文、おつかれさま！</h2><p class="result-score"><strong>${wins} / ${count}</strong>問 正解</p><p>間違えた文型は翌日以降に優先して復習するよ。単語の定着記録は変わりません。</p>${session.filter(a=>!a.ok).map(a=>`<div class="g-box"><p>${esc(a.item.jp)}</p><p class="grammar-sentence">${esc(a.item.answer)}</p><p>${esc(a.item.rule)}</p></div>`).join('')}`+button('start','もう一度英作文（3問）')+button('home','最初の画面へ','text-button center-button');show('result-screen');}
+    function finish(){if(count!==5||phase==='result')return;phase='result';host.onComplete();result.innerHTML=host.renderPlant()+`<h2>英作文、おつかれさま！</h2><p class="result-score"><strong>${wins} / ${count}</strong>問 正解</p><p>間違えた文型は翌日以降に優先して復習するよ。単語の定着記録は変わりません。</p>${session.filter(a=>!a.ok).map(a=>`<div class="g-box"><p>${esc(a.item.jp)}</p><p class="grammar-sentence">${esc(a.item.answer)}</p><p>${esc(a.item.rule)}</p></div>`).join('')}`+button('start','もう一度英作文（5問）')+button('home','最初の画面へ','text-button center-button');show('result-screen');}
     function handle(b){
       const a=b.dataset.grammar;if(!a)return false;
       if(b.disabled)return true;
