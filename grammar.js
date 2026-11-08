@@ -87,7 +87,7 @@
       item=queue.shift();
       if(!rec(item.id).tries){phase='intro';
         const glossary=[...new Set(item.tokens)].filter(t=>basics[t]).map(t=>`${esc(t)}：${esc(basics[t])}`).join(' ／ ');
-        screen.innerHTML=heading()+`<p class="section-label">${groupNames[item.g]}</p><h2>${esc(item.title)}</h2><div class="g-box"><p>${esc(item.rule)}</p><p class="grammar-sentence">${esc(item.answer)}</p><p>${esc(item.jp)}</p></div><p>文を作るための基本語も、ここで少しずつ覚えよう。</p><p class="g-small">${glossary}</p>`+button('practice','並べ替えてみる');show('quiz-screen');
+        screen.innerHTML=heading()+`<p class="section-label">${groupNames[item.g]}</p><h2>${esc(item.title)}</h2><div class="g-box"><p>${esc(item.rule)}</p><p class="grammar-sentence">${esc(item.answer)}</p><p>${esc(item.jp)}</p></div><p>文を作るための基本語も、ここで少しずつ覚えよう。</p><p class="g-small">${glossary}</p>`+button('speak','🔊 英文を聞く','listen-button')+button('practice','並べ替えてみる');show('quiz-screen');
       }else question();
     }
     function question(){
@@ -106,12 +106,13 @@
       r.tries++;if(ok){wins++;r.correct++;if(r.lastDay!==today()){r.streak++;r.lastDay=today();}r.due=later([1,3,7,14,30][Math.min(Math.max(r.streak-1,0),4)]);}else{r.streak=0;r.due=later(1);}
       db.cards[item.id]=r;session.push({item,ok,answer});const saved=save();host.onAttempt();host.playTone(ok);
       phase='feedback';
-      screen.innerHTML=`<div class="g-top">${button('home','← 最初の画面へ','text-button')}<span>英作文 ${count} / 3</span></div><h2>${ok?'できたね！':'ここを覚え直そう'}</h2><p>${esc(item.jp)}</p><p class="grammar-sentence">${esc(item.answer)}</p><div class="g-box">${esc(item.rule)}</div>${!ok&&answer?`<p>あなたの並べ方：${esc(answer)}</p>`:''}${saved?'':'<p role="alert">復習記録を保存できませんでした。ブラウザの保存設定を確認してください。</p>'}`+button('next',queue.length?'次の問題へ':'結果を見る');show('quiz-screen');
+      screen.innerHTML=`<div class="g-top">${button('home','← 最初の画面へ','text-button')}<span>英作文 ${count} / 3</span></div><h2>${ok?'できたね！':'ここを覚え直そう'}</h2><p>${esc(item.jp)}</p><p class="grammar-sentence">${esc(item.answer)}</p><div class="g-box">${esc(item.rule)}</div>${!ok&&answer?`<p>あなたの並べ方：${esc(answer)}</p>`:''}${saved?'':'<p role="alert">復習記録を保存できませんでした。ブラウザの保存設定を確認してください。</p>'}`+button('speak','🔊 英文を聞く','listen-button')+button('next',queue.length?'次の問題へ':'結果を見る');show('quiz-screen');
     }
     function finish(){phase='result';result.innerHTML=host.renderPlant()+`<h2>英作文、おつかれさま！</h2><p class="result-score"><strong>${wins} / ${count}</strong>問 正解</p><p>間違えた文型は翌日以降に優先して復習するよ。単語の定着記録は変わりません。</p>${session.filter(a=>!a.ok).map(a=>`<div class="g-box"><p>${esc(a.item.jp)}</p><p class="grammar-sentence">${esc(a.item.answer)}</p><p>${esc(a.item.rule)}</p></div>`).join('')}`+button('start','もう一度英作文（3問）')+button('home','最初の画面へ','text-button center-button');show('result-screen');}
     function handle(b){
       const a=b.dataset.grammar;if(!a)return false;
       if(b.disabled)return true;
+      if(a==='speak'){if((phase==='intro'||phase==='feedback')&&item&&typeof speak==='function')speak(item.answer);return true;}
       switch(a){case'start':start();break;case'home':phase='';host.onHome();break;case'practice':if(phase==='intro')question();break;case'tile':if(phase==='question'&&!answered){const i=Number(b.dataset.index);if(Number.isInteger(i)&&tiles[i]&&!selected.includes(i)){selected.push(i);update();}}break;case'undo':if(phase==='question'){selected.pop();update();}break;case'clear':if(phase==='question'){selected=[];update();}break;case'check':check();break;case'unknown':check(true);break;case'next':if(phase==='feedback')advance();break;}
       return true;
     }

@@ -1,5 +1,5 @@
-const CACHE_NAME = "eitango-challenge-v21";
-const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./garden.js?v=18", "./grammar.js?v=21", "./extras.js?v=21", "./manifest.webmanifest", "./icon.svg"];
+const CACHE_NAME = "eitango-challenge-v22";
+const APP_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./garden.js?v=18", "./grammar.js?v=22", "./extras.js?v=22", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));
